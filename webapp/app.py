@@ -74,6 +74,15 @@ def run_simulation_api():
     T_emk = [r[3] for r in results]
     G = [r[4] if len(r) > 4 else 0.0 for r in results]
 
+    # compute densities using current EOS implementation
+    try:
+        from equations import density
+        rho_b = [density(p, T) for p, T in zip(p_b, T_b)]
+        rho_emk = [density(p, T) for p, T in zip(p_emk, T_emk)]
+    except Exception:
+        rho_b = []
+        rho_emk = []
+
     return jsonify({
         'times': times,
         'p_b': p_b,
@@ -81,6 +90,8 @@ def run_simulation_api():
         'p_emk': p_emk,
         'T_emk': T_emk,
         'G': G,
+        'rho_b': rho_b,
+        'rho_emk': rho_emk,
     })
 
 

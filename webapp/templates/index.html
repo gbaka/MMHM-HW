@@ -10,7 +10,7 @@
   <body>
     <div class="container">
       <header>
-        <h1>Моделирование дросселирования — Веб-интерфейс</h1>
+        <h1>Моделирование процесса дросселирования</h1>
       </header>
 
       <aside class="panel">
@@ -62,12 +62,26 @@
             </label>
           </div>
 
+          <div class="param-row two-cols">
+            <label>
+              <span class="label-title">mu_f</span>
+              <input name="mu_f" type="number" step="0.000001" value="0.0005">
+              <small class="hint">Произведение μ·f (параметр дросселя), порядок 1e-4…1e-6</small>
+            </label>
+
+            <label>
+              <span class="label-title">m</span>
+              <input name="m" type="number" step="0.01" value="0.1">
+              <small class="hint">Коэффициент для критического расхода</small>
+            </label>
+          </div>
+
           <div class="param-row">
             <label>
               <span class="label-title">Модель газа</span>
               <select name="gas_model">
                 <option value="ideal">Идеальный газ</option>
-                <option value="vdw">Van-der-Waals (Abel)</option>
+                <option value="vdw">Газ Ван-дер-Ваальса</option>
               </select>
               <small class="hint">Выберите уравнение состояния газа</small>
             </label>
@@ -90,9 +104,7 @@
         </div>
       </main>
 
-      <footer>
-        <small>Интерфейс: быстрый просмотр результатов симуляции. Для полного анализа используйте `physics_report.py`.</small>
-      </footer>
+      <!-- footer removed per user request -->
     </div>
 
     <script src="/static/app.js"></script>

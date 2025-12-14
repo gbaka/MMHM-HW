@@ -22,6 +22,31 @@ async function runSim(params){
   return data;
 }
 
+// Render simple placeholder content for each plot (shown on initial load)
+function renderPlaceholderPlots(){
+  const ids = ['plot_pressures','plot_temps','plot_rhos','plot_G'];
+  ids.forEach(id=>{
+    const gd = document.getElementById(id);
+    if(!gd) return;
+    try{ Plotly.purge(gd); }catch(e){}
+    gd.style.width = '';
+    gd.style.height = '';
+    const traces = [{x:[0], y:[0], showlegend:false, marker:{color:'#ddd'}}];
+    const layout = {
+      title: {text:'', x:0.5},
+      xaxis:{visible:false},
+      yaxis:{visible:false},
+      annotations:[{
+        text: 'Нажмите «Запустить»', showarrow:false, xref:'paper', yref:'paper', x:0.5, y:0.5,
+        font:{size:18, color:'#6b7280'}
+      }],
+      autosize:true,
+      margin:{t:20, b:20, l:20, r:20}
+    };
+    Plotly.newPlot(gd, traces, layout, {responsive:true});
+  });
+}
+
 function plotAll(data){
   const t = data.times;
   // Helper to safely re-render a Plotly graph: purge previous state, clear inline styles,
@@ -47,9 +72,20 @@ function plotAll(data){
   const p2 = [{x:t, y:data.T_b, name:'T_b (баллон)'}, {x:t, y:data.T_emk, name:'T_emk (ёмкость)'}];
   renderPlot('plot_temps', p2, {title:'Температуры', xaxis:{title:'t, s'}, yaxis:{title:'K'}});
 
-  const p3 = [{x:t, y:data.p_b.map((pv,i)=>pv/(data.T_b[i]*1)), name:'rho_b (approx)'}];
-  // compute rho via ideal gas on client if needed
-  renderPlot('plot_rhos', p3, {title:'Плотности (прибл.)', xaxis:{title:'t, s'}, yaxis:{title:'kg/m^3'}});
+  // Prefer server-provided densities (rho_b, rho_emk); fall back to ideal-gas approx if not present
+  let traces_rho = [];
+  if(data.rho_b && data.rho_b.length){
+    traces_rho.push({x:t, y:data.rho_b, name:'rho_b (баллон)'});
+  } else if(data.p_b && data.T_b){
+    traces_rho.push({x:t, y:data.p_b.map((pv,i)=>pv/(data.T_b[i]*1)), name:'rho_b (approx)'});
+  }
+  if(data.rho_emk && data.rho_emk.length){
+    traces_rho.push({x:t, y:data.rho_emk, name:'rho_emk (ёмкость)'});
+  } else if(data.p_emk && data.T_emk){
+    // crude approx for emk
+    traces_rho.push({x:t, y:data.p_emk.map((pv,i)=>pv/(data.T_emk[i]*1)), name:'rho_emk (approx)'});
+  }
+  renderPlot('plot_rhos', traces_rho, {title:'Плотности', xaxis:{title:'t, s'}, yaxis:{title:'kg/m^3'}});
 
   const p4 = [{x:t, y:data.G, name:'G (kg/s)', type:'scatter'}];
   renderPlot('plot_G', p4, {title:'Массовый расход', xaxis:{title:'t, s'}, yaxis:{title:'kg/s'}});
@@ -62,6 +98,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   for(const el of form.elements){
     if(el.name && defaults[el.name] !== undefined){ el.value = defaults[el.name]; }
   }
+
+  // show placeholders in plots until user runs simulation
+  renderPlaceholderPlots();
 
   document.getElementById('runBtn').addEventListener('click', async ()=>{
     const formData = new FormData(form);
