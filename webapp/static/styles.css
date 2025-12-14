@@ -1,0 +1,40 @@
+:root{ --bg:#f7f9fc; --panel:#ffffff; --accent:#0b5fff }
+:root{ --bg:#f7f9fc; --panel:#ffffff; --accent:#0b5fff; --muted:#6b7280; --input-border:#d7dde6 }
+body{ font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin:0; background:var(--bg); color:#111 }
+.container{ max-width:1200px; margin:18px auto; display:grid; grid-template-columns: 320px 1fr; gap:18px; padding:0 12px }
+header{ grid-column:1/-1; padding:14px 18px; background:var(--panel); border-radius:10px; box-shadow:0 1px 2px rgba(16,24,40,0.03) }
+.panel{ background:var(--panel); padding:14px; border-radius:10px; box-shadow:0 1px 2px rgba(16,24,40,0.03) }
+main{ background:transparent }
+.plot{ background:var(--panel); padding:10px; margin-bottom:12px; border-radius:8px; min-height:220px }
+
+/* Form and controls */
+label{ display:block; margin:6px 0; font-size:13px }
+.param-row{ margin-bottom:8px }
+.param-row.two-cols{ display:grid; grid-template-columns: 1fr 1fr; gap:8px }
+.label-title{ display:block; font-weight:600; margin-bottom:4px }
+.hint{ display:block; color:var(--muted); font-size:12px; margin-top:4px }
+input[type=number], select{ width:100%; padding:8px 10px; border:1px solid var(--input-border); border-radius:8px; background:white; box-sizing:border-box; font-size:14px }
+select{ -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) calc(1em + 2px), calc(100% - 13px) calc(1em + 2px); background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right:34px }
+
+.form-actions{ margin-top:14px; display:flex; gap:8px }
+button{ padding:10px 14px; border-radius:8px; border:none; background:var(--accent); color:white; cursor:pointer; font-weight:600 }
+button:hover{ filter:brightness(0.98) }
+button#resetBtn{ background:#6b7280 }
+
+footer{ grid-column:1/-1; text-align:center; color:#555; margin-top:8px }
+#status{ margin-top:12px; font-size:14px }
+
+/* Plots grid: 2 columns */
+/* Plots stacked vertically — simple large blocks */
+#plots{ display:block; }
+
+/* Neutralize previous panel elements in case of leftover markup */
+.plot-panel, .plot-header, .plot-body, .toggle-collapse { display: none !important }
+
+.plot{ width:100%; min-height:520px; background:var(--panel); padding:14px; border-radius:8px; box-shadow:0 1px 2px rgba(16,24,40,0.03); margin-bottom:16px }
+
+@media (max-width:900px){
+	.container{ grid-template-columns: 1fr; }
+	#plots{ grid-template-columns: 1fr }
+	.param-row.two-cols{ grid-template-columns: 1fr }
+}

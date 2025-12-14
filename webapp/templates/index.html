@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MMGS — Визуализация симуляции</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Моделирование дросселирования — Веб-интерфейс</h1>
+      </header>
+
+      <aside class="panel">
+        <h2>Параметры</h2>
+        <form id="paramsForm">
+          <div class="param-row">
+            <label>
+              <span class="label-title">t_max</span>
+              <input name="t_max" type="number" step="0.1" value="2.0">
+              <small class="hint">Время моделирования, секунды</small>
+            </label>
+          </div>
+
+          <div class="param-row">
+            <label>
+              <span class="label-title">dt</span>
+              <input name="dt" type="number" step="0.0001" value="0.0005">
+              <small class="hint">Шаг интегрирования (RK4), секунды</small>
+            </label>
+          </div>
+
+          <div class="param-row">
+            <label>
+              <span class="label-title">ρ_b (rho_b_0)</span>
+              <input name="rho_b_0" type="number" step="1" value="250">
+              <small class="hint">Начальная плотность в баллоне, кг/м³</small>
+            </label>
+          </div>
+
+          <div class="param-row">
+            <label>
+              <span class="label-title">p_emk (p_emk_0)</span>
+              <input name="p_emk_0" type="number" step="1" value="98066.5">
+              <small class="hint">Начальное давление в емкости, Па</small>
+            </label>
+          </div>
+
+          <div class="param-row two-cols">
+            <label>
+              <span class="label-title">V_b</span>
+              <input name="V_b" type="number" step="0.01" value="0.1">
+              <small class="hint">Объем баллона, м³</small>
+            </label>
+
+            <label>
+              <span class="label-title">V_emk</span>
+              <input name="V_emk" type="number" step="0.01" value="0.2">
+              <small class="hint">Объем емкости, м³</small>
+            </label>
+          </div>
+
+          <div class="param-row">
+            <label>
+              <span class="label-title">Модель газа</span>
+              <select name="gas_model">
+                <option value="ideal">Идеальный газ</option>
+                <option value="vdw">Van-der-Waals (Abel)</option>
+              </select>
+              <small class="hint">Выберите уравнение состояния газа</small>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button id="runBtn" type="button">Запустить</button>
+            <button id="resetBtn" type="button">Сброс</button>
+          </div>
+        </form>
+        <div id="status"></div>
+      </aside>
+
+      <main>
+        <div id="plots">
+          <div id="plot_pressures" class="plot"></div>
+          <div id="plot_temps" class="plot"></div>
+          <div id="plot_rhos" class="plot"></div>
+          <div id="plot_G" class="plot"></div>
+        </div>
+      </main>
+
+      <footer>
+        <small>Интерфейс: быстрый просмотр результатов симуляции. Для полного анализа используйте `physics_report.py`.</small>
+      </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

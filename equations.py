@@ -1,11 +1,54 @@
 import config as cfg
 import math
 
+
 def density(p, T):
-    """Плотность идеального газа: ρ = p / (RT)"""
-    if T <= 0:
+    """
+    Универсальная функция плотности: выбирает модель по `cfg.gas_model`.
+    Возвращает плотность rho [kg/m^3].
+    """
+    model = getattr(cfg, 'gas_model', 'ideal')
+    if T <= 0 or p <= 0:
         return 0.0
-    return p / (cfg.R * T)
+    if model == 'ideal':
+        return p / (cfg.R * T)
+    elif model == 'vdw':
+        # Van-der-Waals in molar form: p = R_u T / (V_m - b) - a / V_m^2
+        # Solve for molar volume V_m, then rho = M / V_m
+        R_u = cfg.R * cfg.M_molar  # J/(mol K)
+        a = cfg.a_vdw
+        b = cfg.b_vdw
+        M = cfg.M_molar
+
+        # initial guess: ideal molar volume
+        V_m = R_u * T / p
+        if V_m <= b:
+            V_m = b * 1.1
+
+        # Newton iteration to solve f(V_m)=0
+        for _ in range(50):
+            denom = V_m - b
+            if denom == 0:
+                denom = 1e-12
+            f = R_u * T / denom - a / (V_m ** 2) - p
+            # derivative df/dV = -R_u*T/(V_m-b)^2 + 2a/V_m^3
+            df = -R_u * T / (denom ** 2) + 2.0 * a / (V_m ** 3)
+            if df == 0:
+                break
+            V_m_new = V_m - f / df
+            if V_m_new <= b:
+                V_m_new = b * 1.0001
+            if abs(V_m_new - V_m) / V_m < 1e-9:
+                V_m = V_m_new
+                break
+            V_m = V_m_new
+
+        # rho = mass per mol / molar volume
+        rho = M / V_m
+        return rho
+    else:
+        # fallback to ideal
+        return p / (cfg.R * T)
 
 def phi(v):
     """Функция φ(v) для докритического расхода."""
@@ -66,6 +109,19 @@ def rhs(t, y):
     n = cfg.n
     R = cfg.R
     tau = getattr(cfg, 'valve_tau', 0.01)
+    gas_model = getattr(cfg, 'gas_model', 'ideal')
+
+    def density_and_derivs(p, T):
+        """
+        Вернуть rho, dρ/dp, dρ/dT. Для сложных EOS используем центральные разности.
+        """
+        rho = density(p, T)
+        # finite differences
+        dp = max(1e-6 * p, 1e-6)
+        dT = max(1e-6 * T, 1e-6)
+        rho_p = (density(p + dp, T) - density(p - dp, T)) / (2 * dp)
+        rho_T = (density(p, T + dT) - density(p, T - dT)) / (2 * dT)
+        return rho, rho_p, rho_T
 
     # Защита от нефизичных значений: если давления или температуры невалидны,
     # заставляем расход убывать к нулю (клапан закрывается) и возвращаем нули для dp/dt.
@@ -80,15 +136,45 @@ def rhs(t, y):
     dG_dt = (G_cmd - G) / tau
 
     # ===== БАЛЛОН =====
-    dpb_dt = -(n * R / cfg.V_b) * T_b * G
-    dTb_dt = ((n - 1) / n) * (T_b / p_b) * dpb_dt if p_b != 0 else 0.0
+    # Общий подход для любой EOS:
+    # m = rho(p,T) * V
+    # dm/dt = -G (баллон) = V*(rho_p * dpb_dt + rho_T * dTb_dt)
+    # Энергия: U = m * cv * T, dU/dt = -h_out * G ~ -cp * T_b * G
+    # Решаем сначала dT/dt из энергетического уравнения, затем dp/dt из массового
+    # cv и cp (используем идеальные выражения как приближение)
+    cv = R / (n - 1)
+    cp = cv + R
+
+    # Cylinder
+    rho_b, rho_bp, rho_bT = density_and_derivs(p_b, T_b)
+    m_b = rho_b * cfg.V_b
+    # avoid zero mass
+    if m_b <= 0:
+        dTb_dt = 0.0
+    else:
+        # from energy balance: cv * (m_b * dT + T_b * dm/dt) = -cp * T_b * G
+        # dm/dt = -G
+        # cv * m_b * dT - cv * T_b * G = -cp * T_b * G
+        # => cv * m_b * dT = (cv - cp) * T_b * G = -R * T_b * G
+        dTb_dt = -(R * T_b * G) / (cv * m_b)
+
+    # mass eq -> dpb_dt
+    denom = rho_bp if rho_bp != 0 else 1e-12
+    dpb_dt = (-G / cfg.V_b - rho_bT * dTb_dt) / denom
 
     # ===== ЁМКОСТЬ =====
-    # Mass balance: dm/dt = G, m = p*V/(R*T)
-    # Energy balance (adiabatic): dU/dt = h*G, U = p*V/n = m*cv*T
-    # From energy: dT_emk/dt = R*T_b*G / p_emk
-    # From mass: dp_emk/dt = R*(T_emk + T_b)*G / V_emk
-    dpemk_dt = (R / cfg.V_emk) * (T_emk + T_b) * G
-    dTemk_dt = (R / p_emk) * T_b * G if p_emk != 0 else 0.0
+    rho_emk, rho_ep, rho_eT = density_and_derivs(p_emk, T_emk)
+    m_emk = rho_emk * cfg.V_emk
+    if m_emk <= 0:
+        dTemk_dt = 0.0
+    else:
+        # energy balance: cv*(m_emk*dT + T_emk*dm/dt) = cp * T_b * G
+        # dm/dt = +G
+        # cv*m_emk*dT + cv*T_emk*G = cp*T_b*G
+        # => cv*m_emk*dT = (cp*T_b - cv*T_emk) * G
+        dTemk_dt = (cp * T_b - cv * T_emk) * G / (cv * m_emk)
+
+    denom_e = rho_ep if rho_ep != 0 else 1e-12
+    dpemk_dt = (G / cfg.V_emk - rho_eT * dTemk_dt) / denom_e
 
     return [dpb_dt, dTb_dt, dpemk_dt, dTemk_dt, dG_dt]
