@@ -53,8 +53,8 @@ def density(p, T):
 def phi(v):
     """Функция φ(v) для докритического расхода."""
     n = cfg.n
-    term1 = v ** (2 / (n - 1))
-    term2 = v ** ((n + 1) / (n - 1))
+    term1 = v ** (2 / n)
+    term2 = v ** ((n + 1) / n)
     
     if term1 < term2:
         return 0.0
@@ -82,9 +82,9 @@ def mass_flow(p_b, T_b, p_emk):
         phi_val = phi(v)
         if phi_val < 0:
             phi_val = 0
-        return mu_f * phi_val * math.sqrt(2 * n / (R * (n - 1)) * (p_b / T_b))
+        return mu_f * phi_val * math.sqrt(2*n/(R*(n-1))) * p_b / math.sqrt(T_b)
     else:
-        # критический режим (захлёст)
+        # критический режим
         return mu_f * m * p_b / math.sqrt(T_b)
 
 def rhs(t, y):
